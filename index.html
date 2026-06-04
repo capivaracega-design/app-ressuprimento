@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ressuprimento Torres</title>
+</head>
+
+<body>
+  <h1>Ressuprimento entre Torres</h1>
+
+  <label>Cobertura (dias):</label>
+  <input type="number" id="cobertura" value="3"><br><br>
+
+  <input id="cod" placeholder="Código"><br>
+  <input id="desc" placeholder="Descrição"><br>
+  <input id="consumo" placeholder="Consumo diário"><br>
+  <input type="date" id="data"><br><br>
+
+  <button onclick="addItem()">Adicionar</button>
+
+  <h2>Itens</h2>
+  <ul id="lista"></ul>
+
+  <script>
+    let items = [];
+
+    function addItem() {
+      const cod = document.getElementById("cod").value;
+      const desc = document.getElementById("desc").value;
+      const consumo = Number(document.getElementById("consumo").value);
+      const cobertura = Number(document.getElementById("cobertura").value);
+      const data = document.getElementById("data").value;
+
+      const qtd = consumo * cobertura;
+
+      const item = {
+        cod,
+        desc,
+        consumo,
+        qtd,
+        data
+      };
+
+      items.push(item);
+
+      render();
+    }
+
+    function render() {
+      const lista = document.getElementById("lista");
+      lista.innerHTML = "";
+
+      items.forEach(i => {
+        const li = document.createElement("li");
+        li.innerText = `${i.cod} - ${i.desc} | Qtd: ${i.qtd}`;
+        lista.appendChild(li);
+      });
+    }
+  </script>
+
+</body>
+</html>
+``
