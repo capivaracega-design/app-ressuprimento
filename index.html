@@ -11,11 +11,8 @@ body{font-family:Arial;background:#f4f1ec;margin:0}
 .tab{display:inline-block;padding:10px 15px;margin-right:5px;background:#ddd;cursor:pointer;border-radius:5px}
 .ativo{background:#8a5a34;color:#fff}
 .card{background:#fff;padding:15px;margin-top:10px;border-left:5px solid #8a5a34;border-radius:6px}
-input,select,textarea{margin:5px;padding:6px;border:1px solid #ccc;border-radius:4px}
-textarea{width:100%;height:120px}
+textarea{width:100%;height:120px;margin:5px;padding:6px}
 button{background:#8a5a34;color:#fff;border:none;padding:6px 14px;cursor:pointer;border-radius:4px}
-button:hover{background:#6f4728}
-h3{color:#8a5a34}
 </style>
 </head>
 <body>
@@ -29,49 +26,29 @@ h3{color:#8a5a34}
 
 <div>
  <div class="tab ativo" onclick="abrir('operacao',this)">Operação</div>
- <div class="tab" onclick="abrir('cadastro',this)">Cadastro Endereços</div>
- <div class="tab" onclick="abrir('importacao',this)">Importar Pedido CD</div>
+ <div class="tab" onclick="abrir('cadastro',this)">Cadastro</div>
+ <div class="tab" onclick="abrir('importacao',this)">Importar CD</div>
 </div>
 
-<!-- OPERAÇÃO -->
 <div id="operacao">
 <div class="card">
 Nome: <input id="nomeUsuario">
 Cobertura: <input type="number" id="cobertura" value="3">
-<select id="torreEndereco"><option value="1">T1</option><option value="2">T2</option></select>
 Data: <input type="date" id="dataPedido">
 <button onclick="salvarPedido()">Salvar</button>
 </div>
-
-<div class="card">
-<input id="codInput" placeholder="Código">
-<input id="desc" placeholder="Descrição">
-<input id="consumo" placeholder="Consumo">
-<input id="saldo" placeholder="Saldo">
-<button onclick="addItem()">Adicionar</button>
-</div>
-
 <div class="card"><h3>Itens</h3><div id="lista"></div></div>
-<div class="card"><h3>Histórico</h3>
-<input type="date" id="buscarData" onchange="carregarHistorico()">
-<div id="historico"></div></div>
-
-<button onclick="exportar()">Exportar</button>
 </div>
 
-<!-- CADASTRO -->
 <div id="cadastro" style="display:none">
 <div class="card">
-<h3>Colar cadastro (Código,Descrição,T1,T2)</h3>
 <textarea id="loteCadastro"></textarea>
 <button onclick="importarCadastro()">Salvar Cadastro</button>
 </div>
 </div>
 
-<!-- IMPORTAÇÃO -->
 <div id="importacao" style="display:none">
 <div class="card">
-<h3>Colar pedido CD (Código,Consumo,Saldo)</h3>
 <textarea id="lotePedido"></textarea>
 <button onclick="importarPedido()">Carregar</button>
 </div>
@@ -79,13 +56,11 @@ Data: <input type="date" id="dataPedido">
 
 </div>
 
-<!-- ✅ FIREBASE CORRETO -->
 https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
 <script>
-const firebaseConfig={apiKey:"AIzaSyAzoads1OH6SEKU5UxlAUYgBPEmO_hy2w4",authDomain:"ressuprimento-vns.firebaseapp.com",projectId:"ressuprimento-vns"};
-firebase.initializeApp(firebaseConfig);
+firebase.initializeApp({apiKey:"AIzaSyAzoads1OH6SEKU5UxlAUYgBPEmO_hy2w4",projectId:"ressuprimento-vns"});
 const db=firebase.firestore();
 
 let items=[];let cadastro={};
@@ -96,78 +71,39 @@ function carregarCadastro(){db.collection('cadastro').onSnapshot(s=>{cadastro={}
 carregarCadastro();
 
 function importarCadastro(){
- document.getElementById('loteCadastro').value.split('\n').forEach(l=>{
- let [cod,desc,t1,t2]=l.split(/[,\t]/);
+ loteCadastro.value.split('\n').forEach(l=>{
+ let [cod,desc,t1,t2]=l.split(/[\t,]/);
  if(cod){db.collection('cadastro').doc(cod.trim()).set({desc,t1,t2});}
- });
- alert('Cadastro salvo');
+ });alert('ok');
 }
 
+// ✅ CORREÇÃO AQUI
 function importarPedido(){
  items=[];
- document.getElementById('lotePedido').value.split('\n').forEach(l=>{
- let [cod,cons,saldo]=l.split(/[,\t]/);
- if(cod){
- let desc=cadastro[cod]?.desc||'';
- let nec=(Number(cons)*Number(cobertura.value))-Number(saldo);
+ lotePedido.value.split('\n').forEach(l=>{
+ let partes=l.trim().split(/\s+/);
+ if(partes.length>=2){
+ let cod=partes[0];
+ let quantidade=Number(partes[partes.length-1]);
+ let desc=partes.slice(1,partes.length-1).join(' ');
+ let saldo=0;
+ let nec=(quantidade*Number(cobertura.value))-saldo;
  if(nec<0) nec=0;
- items.push({cod,desc,cons:Number(cons),saldo:Number(saldo),nec});
+ items.push({cod,desc,cons:quantidade,saldo,nec});
  }
  });
  render();
 }
 
-function addItem(){
- let cod=document.getElementById('codInput').value;
- let desc=document.getElementById('desc').value||cadastro[cod]?.desc||'';
- let cons=Number(consumo.value);
- let saldoVal=Number(saldo.value);
- let nec=(cons*Number(cobertura.value))-saldoVal;
- if(nec<0) nec=0;
- items.push({cod,desc,cons,saldo:saldoVal,nec});
- render();
-}
-
 function render(){
- let html='';
- items.forEach((i,idx)=>{
- html+=`${i.cod} - ${i.desc} | Nec: ${i.nec} <button onclick="remover(${idx})">X</button><br>`;
- });
- document.getElementById('lista').innerHTML=html;
+ lista.innerHTML=items.map((i,idx)=>`${i.cod} - ${i.desc} | ${i.nec} <button onclick="remover(${idx})">X</button>`).join('<br>');
 }
 
 function remover(i){items.splice(i,1);render()}
 
 function salvarPedido(){
- if(!dataPedido.value||!nomeUsuario.value){alert('Preencher nome e data');return}
  items.forEach(i=>db.collection('pedidos').add({data:dataPedido.value,usuario:nomeUsuario.value,...i}));
- alert('Salvo ✅');
- items=[];render();
-}
-
-function carregarHistorico(){
- db.collection('pedidos').where('data','==',buscarData.value).onSnapshot(s=>{
- let html='';
- s.forEach(d=>{
- let i=d.data();
- html+=`${i.cod} - ${i.desc} | ${i.nec} | ${i.usuario}<br>`;
- });
- document.getElementById('historico').innerHTML=html;
- })
-}
-
-function exportar(){
- let torre=torreEndereco.value;
- let csv='Codigo,Descricao,Necessidade,Endereco\n';
- items.forEach(i=>{
- let end=cadastro[i.cod]?(torre=='1'?cadastro[i.cod].t1:cadastro[i.cod].t2):'';
- csv+=`${i.cod},${i.desc},${i.nec},${end}\n`;
- });
- let blob=new Blob([csv]);
- let a=document.createElement('a');
- a.href=URL.createObjectURL(blob);
- a.download='ressuprimento.csv';
- a.click();
+ alert('salvo');items=[];render();
 }
 </script>
 
