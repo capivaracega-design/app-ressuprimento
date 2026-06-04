@@ -1,71 +1,114 @@
-<!-- NOVA PARTE PARA COLAR NO SEU CÓDIGO EXISTENTE -->
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Ressuprimento VNS</title>
+<style>
+body{font-family:Arial;background:#f1f3f6;padding:20px}
+h1{color:#0b3d91}
+.tab{display:inline-block;padding:10px 15px;background:#ddd;margin-right:5px;cursor:pointer;border-radius:5px}
+.ativo{background:#0b3d91;color:#fff}
+.card{background:#fff;padding:15px;margin-top:10px;border-radius:8px}
+</style>
+</head>
+<body>
+
+<h1>Ressuprimento VNS</h1>
+
+<div>
+  <div class="tab ativo" onclick="abrir('operacao',this)">Operação</div>
+  <div class="tab" onclick="abrir('cadastro',this)">Cadastro de Itens</div>
+</div>
+
+<!-- ABA OPERAÇÃO -->
+<div id="operacao">
+<div class="card">
+Cobertura: <input type="number" id="cobertura" value="3">
+<select id="torreEndereco"><option value="1">Torre 1</option><option value="2">Torre 2</option></select>
+</div>
 
 <div class="card">
-<h3>Cadastro em Lote (colar do Excel)</h3>
-<textarea id="lote" rows="6" style="width:100%" placeholder="Cole aqui: codigo,descricao,endereco_t1,endereco_t2"></textarea>
-<button onclick="importarLote()">Importar Cadastro</button>
+<input id="cod" placeholder="Código">
+<input id="desc" placeholder="Descrição">
+<input id="consumo" placeholder="Consumo">
+<input id="saldo" placeholder="Saldo">
+<button onclick="addItem()">Adicionar</button>
+</div>
+
+<div class="card">
+<h3>Itens</h3>
+<div id="lista"></div>
+</div>
+
+<button onclick="exportar()">Exportar Excel</button>
+</div>
+
+<!-- ABA CADASTRO -->
+<div id="cadastro" style="display:none">
+<div class="card">
+<h3>Cadastro em lote (colar do Excel)</h3>
+<textarea id="lote" style="width:100%;height:150px"></textarea><br>
+<button onclick="importar()">Importar Cadastro</button>
+</div>
 </div>
 
 <script>
-// substitui o cadastro fixo por dinâmico
 let cadastro = JSON.parse(localStorage.getItem("cadastro")) || {};
+let items = [];
 
-function importarLote(){
-  const texto = document.getElementById("lote").value;
-  const linhas = texto.split("\n");
-
-  linhas.forEach(l => {
-    const [cod, desc, t1, t2] = l.split(",");
-    if(cod){
-      cadastro[cod.trim()] = {
-        desc: desc ? desc.trim() : "",
-        t1: t1 ? t1.trim() : "",
-        t2: t2 ? t2.trim() : ""
-      };
-    }
-  });
-
-  localStorage.setItem("cadastro", JSON.stringify(cadastro));
-  alert("Cadastro importado com sucesso!");
+function abrir(id,el){
+ document.getElementById('operacao').style.display='none';
+ document.getElementById('cadastro').style.display='none';
+ document.getElementById(id).style.display='block';
+ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('ativo'));
+ el.classList.add('ativo');
 }
 
-// ajustar função addItem para usar cadastro dinâmico
-function addItem(){
- let cod = codEl().value;
- let desc = descEl().value;
- let consumo = Number(consEl().value);
- let saldo = Number(saldoEl().value);
- let cobertura = Number(document.getElementById("cobertura").value);
-
- if(cadastro[cod]){
-   if(!desc) desc = cadastro[cod].desc;
+function importar(){
+ const texto = document.getElementById('lote').value;
+ texto.split("\n").forEach(l=>{
+ const [cod,desc,t1,t2]=l.split(/[,\t]/);
+ if(cod){
+ cadastro[cod.trim()]={desc:desc?.trim(),t1:t1?.trim(),t2:t2?.trim()};
  }
-
- let nec = (consumo * cobertura) - saldo;
- if(nec < 0) nec = 0;
-
- items.push({ cod, desc, consumo, saldo, nec });
- render(); limpar();
-}
-
-// export ajustado com endereço por torre
-function exportar(){
- let torre = document.getElementById("torreEndereco").value;
- let csv = "Codigo,Descricao,Consumo,Saldo,Necessidade,Endereco\n";
-
- items.forEach(i=>{
- let end="";
- if(cadastro[i.cod]){
- end = torre=="1" ? cadastro[i.cod].t1 : cadastro[i.cod].t2;
- }
-
- csv += `${i.cod},${i.desc},${i.consumo},${i.saldo},${i.nec},${end}\n`;
  });
+ localStorage.setItem("cadastro",JSON.stringify(cadastro));
+ alert('Cadastro importado');
+}
 
- let blob = new Blob([csv]);
- let a = document.createElement("a");
- a.href = URL.createObjectURL(blob);
- a.download = "ressuprimento.csv";
- a.click();
+function addItem(){
+ let cod=document.getElementById('cod').value;
+ let desc=document.getElementById('desc').value;
+ let cons=Number(document.getElementById('consumo').value);
+ let saldo=Number(document.getElementById('saldo').value);
+ let cob=Number(document.getElementById('cobertura').value);
+
+ if(cadastro[cod] && !desc){desc=cadastro[cod].desc}
+
+ let nec=(cons*cob)-saldo; if(nec<0) nec=0;
+ items.push({cod,desc,cons,saldo,nec});
+ render();
+}
+
+function render(){
+ let div=document.getElementById('lista'); div.innerHTML='';
+ items.forEach(i=>{
+ div.innerHTML+=`${i.cod} - ${i.desc} | Nec:${i.nec}<br>`;
+ })
+}
+
+function exportar(){
+ let torre=document.getElementById('torreEndereco').value;
+ let csv="Codigo,Descricao,Consumo,Saldo,Necessidade,Endereco\n";
+ items.forEach(i=>{
+ let end=cadastro[i.cod]? (torre=="1"?cadastro[i.cod].t1:cadastro[i.cod].t2):"";
+ csv+=`${i.cod},${i.desc},${i.cons},${i.saldo},${i.nec},${end}\n`;
+ });
+ let blob=new Blob([csv]);
+ let a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+ a.download='ressuprimento.csv'; a.click();
 }
 </script>
+
+</body>
+</html>
