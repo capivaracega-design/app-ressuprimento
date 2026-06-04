@@ -39,7 +39,7 @@ th{background:#8a5a34;color:#fff}
 Cobertura: <input type="number" id="cobertura" value="3">
 <select id="torre"><option>Torre 1</option><option>Torre 2</option></select>
 Data: <input type="date" id="dataPedido">
-<button onclick="salvarPedido()">Salvar Pedido</button>
+<button type="button" onclick="salvarPedido()">Salvar Pedido</button>
 </div>
 
 <div class="card">
@@ -47,7 +47,7 @@ Data: <input type="date" id="dataPedido">
 <input id="desc" placeholder="Descrição">
 <input id="consumo" placeholder="Consumo">
 <input id="saldo" placeholder="Saldo">
-<button onclick="addItem()">Adicionar</button>
+<button type="button" onclick="addItem()">Adicionar</button>
 </div>
 
 <div class="card">
@@ -72,15 +72,15 @@ Data: <input type="date" id="dataPedido">
 
 <div id="cadastro" style="display:none">
 <div class="card">
-<h3>Cadastro em lote (Código,Descrição,T1,T2)</h3>
+<h3>Cadastro em lote (Código,Descrição)</h3>
 <textarea id="loteCadastro"></textarea>
-<button onclick="importarCadastro()">Salvar Cadastro</button>
+<button type="button" onclick="importarCadastro()">Salvar Cadastro</button>
 </div>
 </div>
 
 </div>
 
-<!-- ✅ FIREBASE CORRIGIDO -->
+<!-- ✅ FIREBASE CORRETO -->
 https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
@@ -120,22 +120,25 @@ function autoDesc(){
  if(cadastro[c]) document.getElementById('desc').value=cadastro[c].desc;
 }
 
-// ✅ CORREÇÃO DO ERRO DE ADICIONAR
+// ✅ CORREÇÃO TOTAL
 function addItem(){
- let cod=document.getElementById('cod').value;
- let desc=document.getElementById('desc').value || cadastro[cod]?.desc || '';
- let consumo=Number(document.getElementById('consumo').value);
- let saldo=Number(document.getElementById('saldo').value);
+ const codVal = document.getElementById('cod').value.trim();
+ const descVal = document.getElementById('desc').value || cadastro[codVal]?.desc || '';
+ const consumoVal = Number(document.getElementById('consumo').value);
+ const saldoVal = Number(document.getElementById('saldo').value);
+ const coberturaVal = Number(document.getElementById('cobertura').value);
 
- if(!cod){alert('Informe o código');return}
+ if(!codVal){alert('Digite o código');return;}
+ if(isNaN(consumoVal)){alert('Digite consumo válido');return;}
+ if(isNaN(saldoVal)){alert('Digite saldo válido');return;}
 
- let nec=(consumo*Number(document.getElementById('cobertura').value))-saldo;
- if(nec<0) nec=0;
+ let nec = (consumoVal * coberturaVal) - saldoVal;
+ if(nec < 0) nec = 0;
 
- items.push({cod,desc,nec});
+ items.push({cod:codVal, desc:descVal, nec});
  render();
 
- // limpa campos
+ // limpar
  document.getElementById('cod').value='';
  document.getElementById('desc').value='';
  document.getElementById('consumo').value='';
@@ -153,22 +156,20 @@ function render(){
 function remover(i){items.splice(i,1);render()}
 
 function salvarPedido(){
- if(!document.getElementById('nomeUsuario').value || !document.getElementById('dataPedido').value){
-  alert('Preencher nome e data');return;
- }
+ const nome = document.getElementById('nomeUsuario').value;
+ const data = document.getElementById('dataPedido').value;
 
- items.forEach(i=>db.collection('pedidos').add({
-  data:dataPedido.value,
-  usuario:nomeUsuario.value,
-  ...i
- }));
+ if(!nome||!data){alert('Preencher nome e data');return}
 
+ items.forEach(i=>db.collection('pedidos').add({data,usuario:nome,...i}));
  alert('Salvo ✅');
- items=[];render();
+ items=[];
+ render();
 }
 
 function carregarHistorico(){
- db.collection('pedidos').where('data','==',buscarData.value)
+ const data = document.getElementById('buscarData').value;
+ db.collection('pedidos').where('data','==',data)
  .onSnapshot(s=>{
   let html='';
   s.forEach(d=>{
