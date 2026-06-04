@@ -15,7 +15,7 @@ button{background:#8a5a34;color:#fff;border:none;padding:6px 12px;cursor:pointer
 table{width:100%;border-collapse:collapse;margin-top:10px}
 th,td{border:1px solid #ddd;padding:6px}
 th{background:#8a5a34;color:#fff}
-textarea{width:100%;height:140px}
+textarea{width:100%;height:120px}
 </style>
 </head>
 <body>
@@ -26,7 +26,7 @@ textarea{width:100%;height:140px}
 
 <div>
 <div class="tab ativo" onclick="abrir('operacao',this)">Operação</div>
-<div class="tab" onclick="abrir('excel',this)">Colar Excel</div>
+<div class="tab" onclick="abrir('lote',this)">Importar Lote</div>
 </div>
 
 <!-- OPERAÇÃO -->
@@ -47,57 +47,127 @@ Cobertura: <input type="number" id="cobertura" value="3">
 </div>
 </div>
 
-<!-- EXCEL -->
-<div id="excel" style="display:none">
+<!-- LOTE -->
+<div id="lote" style="display:none">
+
+<!-- ✅ BLOCO 1: ITEM POR LINHA -->
 <div class="card">
-<h3>Colar direto do Excel (colunas separadas)</h3>
-<p>Formato: Código | Descrição | Saldo | Quantidade</p>
-<textarea id="excelInput"></textarea>
-<button onclick="importarExcel()">Importar</button>
+<h3>Adicionar item (manual)</h3>
+<input id="l_cod" placeholder="Código">
+<input id="l_desc" placeholder="Descrição">
+<input id="l_saldo" placeholder="Saldo Torre">
+<input id="l_qtd" placeholder="Qtd CD">
+<button onclick="addLoteItem()">Adicionar</button>
 </div>
+
+<!-- ✅ BLOCO 2: COLAR EXCEL -->
+<div class="card">
+<h3>Ou colar vários do Excel</h3>
+<p>Formato: Código | Descrição | Saldo | Qtd</p>
+<textarea id="excelInput"></textarea>
+<button onclick="importarExcel()">Importar Excel</button>
+</div>
+
+<!-- LISTA DO LOTE -->
+<div class="card">
+<h3>Itens adicionados</h3>
+<table>
+<thead>
+<tr><th>Código</th><th>Descrição</th><th>Saldo</th><th>Qtd</th><th></th></tr>
+</thead>
+<tbody id="loteLista"></tbody>
+</table>
+<button onclick="confirmarLote()">Enviar para Operação</button>
+</div>
+
 </div>
 
 </div>
 
 <script>
 let items=[];
+let lote=[];
 
 function abrir(id,el){
  document.getElementById('operacao').style.display='none';
- document.getElementById('excel').style.display='none';
+ document.getElementById('lote').style.display='none';
  document.getElementById(id).style.display='block';
  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('ativo'));
  el.classList.add('ativo');
 }
 
-// ✅ NOVO: leitura estruturada de Excel
+// ✅ adicionar manual
+function addLoteItem(){
+ const cod=l_cod.value;
+ const desc=l_desc.value;
+ const saldo=Number(l_saldo.value)||0;
+ const qtd=Number(l_qtd.value)||0;
+
+ if(!cod){alert('Informe o código');return}
+
+ lote.push({cod,desc,saldo,qtd});
+ renderLote();
+
+ l_cod.value='';l_desc.value='';l_saldo.value='';l_qtd.value='';
+}
+
+// ✅ importar Excel
 function importarExcel(){
- const linhas=document.getElementById('excelInput').value.split('\n');
- const cobertura=Number(document.getElementById('cobertura').value)||0;
+ const linhas=excelInput.value.split('\n');
 
  linhas.forEach(l=>{
-  let colunas=l.split('\t'); // IMPORTANTÍSSIMO: separador do Excel
+  let col=l.split('\t');
 
-  if(colunas.length>=4){
-   let cod=colunas[0]?.trim();
-   let desc=colunas[1]?.trim();
-   let saldo=Number(colunas[2]);
-   let qtd=Number(colunas[3]);
+  if(col.length>=4){
+   let cod=col[0]?.trim();
+   let desc=col[1]?.trim();
+   let saldo=Number(col[2]);
+   let qtd=Number(col[3]);
 
    if(!cod) return;
    if(isNaN(saldo)) saldo=0;
    if(isNaN(qtd)) qtd=0;
 
-   let nec=Math.max((qtd * cobertura) - saldo,0);
-
-   items.push({cod,desc,saldo,qtd,nec});
+   lote.push({cod,desc,saldo,qtd});
   }
  });
 
+ renderLote();
+ excelInput.value='';
+}
+
+function renderLote(){
+ let html='';
+ lote.forEach((i,idx)=>{
+  html+=`<tr>
+   <td>${i.cod}</td>
+   <td>${i.desc}</td>
+   <td>${i.saldo}</td>
+   <td>${i.qtd}</td>
+   <td><button onclick="removerLote(${idx})">X</button></td>
+  </tr>`;
+ });
+ loteLista.innerHTML=html;
+}
+
+function removerLote(i){lote.splice(i,1);renderLote();}
+
+// ✅ envio para operação
+function confirmarLote(){
+ const cobertura=Number(cobertura.value)||0;
+
+ lote.forEach(i=>{
+  let nec=Math.max((i.qtd * cobertura)-i.saldo,0);
+  items.push({...i,nec});
+ });
+
+ lote=[];
+ renderLote();
  render();
  abrir('operacao',document.querySelector('.tab'));
 }
 
+// tabela principal
 function render(){
  let html='';
  items.forEach((i,idx)=>{
