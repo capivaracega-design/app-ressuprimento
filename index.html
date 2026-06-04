@@ -8,10 +8,8 @@ body{font-family:Arial;background:#f4f1ec;margin:0}
 .header{background:#b58b63;color:#fff;padding:20px}
 .container{padding:20px}
 .card{background:#fff;padding:15px;margin-bottom:10px;border-radius:6px;border-left:5px solid #8a5a34}
-input{margin:5px;padding:6px}
+input,select,textarea{margin:5px;padding:6px}
 button{background:#8a5a34;color:#fff;border:none;padding:6px 12px;cursor:pointer;border-radius:4px}
-.tab{display:inline-block;margin-right:5px;padding:8px 12px;background:#ddd;cursor:pointer;border-radius:4px}
-.ativo{background:#8a5a34;color:#fff}
 table{width:100%;border-collapse:collapse;margin-top:10px}
 th,td{border:1px solid #ddd;padding:6px}
 th{background:#8a5a34;color:#fff}
@@ -23,21 +21,15 @@ th{background:#8a5a34;color:#fff}
 
 <div class="container">
 
-<div>
-<div class="tab ativo" onclick="abrir('operacao',this)">Operação</div>
-<div class="tab" onclick="abrir('cadastro',this)">Cadastro Endereços</div>
-</div>
-
-<div id="operacao">
-
 <div class="card">
-<input id="nomeUsuario" placeholder="Nome do responsável">
+<label>Nome do responsável:</label><br>
+<input id="nomeUsuario" placeholder="Digite seu nome">
 </div>
 
 <div class="card">
 Cobertura: <input type="number" id="cobertura" value="3">
+<select id="torre"><option>Torre 1</option><option>Torre 2</option></select>
 Data: <input type="date" id="dataPedido">
-<button onclick="salvarPedido()" type="button">Salvar</button>
 </div>
 
 <div class="card">
@@ -45,14 +37,14 @@ Data: <input type="date" id="dataPedido">
 <input id="desc" placeholder="Descrição">
 <input id="consumo" placeholder="Consumo">
 <input id="saldo" placeholder="Saldo">
-<button onclick="addItem()" type="button">Adicionar</button>
+<button type="button" onclick="addItem()">Adicionar</button>
 </div>
 
 <div class="card">
 <h3>Itens</h3>
 <table>
 <thead>
-<tr><th>Código</th><th>Descrição</th><th>Nec</th><th></th></tr>
+<tr><th>Código</th><th>Descrição</th><th>Necessidade</th><th></th></tr>
 </thead>
 <tbody id="lista"></tbody>
 </table>
@@ -60,48 +52,28 @@ Data: <input type="date" id="dataPedido">
 
 </div>
 
-<div id="cadastro" style="display:none">
-<div class="card">
-<textarea id="loteCadastro"></textarea>
-<button onclick="importarCadastro()">Salvar</button>
-</div>
-</div>
-
-</div>
-
-<!-- ✅ CORREÇÃO REAL: LINHA ERRADA REMOVIDA -->
-https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
 <script>
-firebase.initializeApp({apiKey:"AIzaSyAzoads1OH6SEKU5UxlAUYgBPEmO_hy2w4",projectId:"ressuprimento-vns"});
-const db=firebase.firestore();
-
 let items=[];
 
-function abrir(id,el){
- document.getElementById('operacao').style.display='none';
- document.getElementById('cadastro').style.display='none';
- document.getElementById(id).style.display='block';
- document.querySelectorAll('.tab').forEach(t=>t.classList.remove('ativo'));
- el.classList.add('ativo');
-}
-
-// ✅ TESTE FORÇADO
 function addItem(){
- console.log('clicou');
-
  const cod = document.getElementById('cod').value;
  const desc = document.getElementById('desc').value;
  const consumo = Number(document.getElementById('consumo').value) || 0;
  const saldo = Number(document.getElementById('saldo').value) || 0;
  const cobertura = Number(document.getElementById('cobertura').value) || 0;
 
+ if(!cod){ alert('Digite o código'); return; }
+
  const nec = Math.max((consumo * cobertura) - saldo, 0);
 
  items.push({cod, desc, nec});
-
  render();
+
+ // limpar campos
+ document.getElementById('cod').value='';
+ document.getElementById('desc').value='';
+ document.getElementById('consumo').value='';
+ document.getElementById('saldo').value='';
 }
 
 function render(){
@@ -113,12 +85,6 @@ function render(){
 }
 
 function remover(i){ items.splice(i,1); render(); }
-
-function salvarPedido(){
- alert('ok');
-}
-
-function importarCadastro(){alert('ok');}
 </script>
 
 </body>
