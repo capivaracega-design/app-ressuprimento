@@ -20,11 +20,18 @@ h1{color:#0b3d91}
   <div class="tab" onclick="abrir('cadastro',this)">Cadastro de Itens</div>
 </div>
 
-<!-- ABA OPERAÇÃO -->
+<!-- ================= ABA OPERAÇÃO ================= -->
 <div id="operacao">
+
 <div class="card">
 Cobertura: <input type="number" id="cobertura" value="3">
-<select id="torreEndereco"><option value="1">Torre 1</option><option value="2">Torre 2</option></select>
+<select id="torreEndereco">
+  <option value="1">Torre 1</option>
+  <option value="2">Torre 2</option>
+</select>
+
+Data: <input type="date" id="dataPedido">
+<button onclick="salvarPedido()">Salvar Pedido</button>
 </div>
 
 <div class="card">
@@ -40,10 +47,16 @@ Cobertura: <input type="number" id="cobertura" value="3">
 <div id="lista"></div>
 </div>
 
+<div class="card">
+<h3>Histórico por Data</h3>
+<input type="date" id="buscarData" onchange="carregarHistorico()">
+<div id="historico"></div>
+</div>
+
 <button onclick="exportar()">Exportar Excel</button>
 </div>
 
-<!-- ABA CADASTRO -->
+<!-- ================= ABA CADASTRO ================= -->
 <div id="cadastro" style="display:none">
 <div class="card">
 <h3>Cadastro em lote (colar do Excel)</h3>
@@ -67,13 +80,13 @@ function abrir(id,el){
 function importar(){
  const texto = document.getElementById('lote').value;
  texto.split("\n").forEach(l=>{
- const [cod,desc,t1,t2]=l.split(/[,\t]/);
+ const [cod,desc,t1,t2]=l.split(/[\,\t]/);
  if(cod){
  cadastro[cod.trim()]={desc:desc?.trim(),t1:t1?.trim(),t2:t2?.trim()};
  }
  });
  localStorage.setItem("cadastro",JSON.stringify(cadastro));
- alert('Cadastro importado');
+ alert('Cadastro importado com sucesso');
 }
 
 function addItem(){
@@ -92,21 +105,52 @@ function addItem(){
 
 function render(){
  let div=document.getElementById('lista'); div.innerHTML='';
- items.forEach(i=>{
- div.innerHTML+=`${i.cod} - ${i.desc} | Nec:${i.nec}<br>`;
+ items.forEach((i,index)=>{
+ div.innerHTML+=`${i.cod} - ${i.desc} | Nec:${i.nec} <button onclick="remover(${index})">Excluir</button><br>`;
  })
+}
+
+function remover(i){ items.splice(i,1); render(); }
+
+function salvarPedido(){
+ let data=document.getElementById('dataPedido').value;
+ if(!data){alert('Selecione a data');return;}
+
+ let historico=JSON.parse(localStorage.getItem('historico'))||{};
+ historico[data]=items;
+ localStorage.setItem('historico',JSON.stringify(historico));
+ alert('Pedido salvo');
+}
+
+function carregarHistorico(){
+ let data=document.getElementById('buscarData').value;
+ let historico=JSON.parse(localStorage.getItem('historico'))||{};
+ let div=document.getElementById('historico');
+ div.innerHTML='';
+
+ if(historico[data]){
+ historico[data].forEach(i=>{
+ div.innerHTML+=`${i.cod} - ${i.desc} | Nec:${i.nec}<br>`;
+ });
+ } else {
+ div.innerHTML='Nenhum registro nessa data';
+ }
 }
 
 function exportar(){
  let torre=document.getElementById('torreEndereco').value;
  let csv="Codigo,Descricao,Consumo,Saldo,Necessidade,Endereco\n";
+
  items.forEach(i=>{
  let end=cadastro[i.cod]? (torre=="1"?cadastro[i.cod].t1:cadastro[i.cod].t2):"";
  csv+=`${i.cod},${i.desc},${i.cons},${i.saldo},${i.nec},${end}\n`;
  });
+
  let blob=new Blob([csv]);
- let a=document.createElement('a'); a.href=URL.createObjectURL(blob);
- a.download='ressuprimento.csv'; a.click();
+ let a=document.createElement('a'); 
+ a.href=URL.createObjectURL(blob);
+ a.download='ressuprimento.csv'; 
+ a.click();
 }
 </script>
 
