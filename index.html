@@ -29,10 +29,9 @@ textarea{width:100%;height:120px}
 <div class="tab" onclick="abrir('lote',this)">Importar Lote</div>
 </div>
 
-<!-- OPERAÇÃO -->
 <div id="operacao">
 <div class="card">
-Cobertura: <input type="number" id="cobertura" value="3">
+Cobertura: <input type="number" id="cobertura" value="3" onchange="recalcularTudo()">
 <button onclick="exportar()">Exportar Excel</button>
 </div>
 
@@ -40,17 +39,15 @@ Cobertura: <input type="number" id="cobertura" value="3">
 <h3>Itens</h3>
 <table>
 <thead>
-<tr><th>Código</th><th>Descrição</th><th>Saldo</th><th>Qtd</th><th>Necessidade</th><th></th></tr>
+<tr><th>Código</th><th>Descrição</th><th>Saldo</th><th>Qtd</th><th>Necessidade</th><th>Ações</th></tr>
 </thead>
 <tbody id="lista"></tbody>
 </table>
 </div>
 </div>
 
-<!-- LOTE -->
 <div id="lote" style="display:none">
 
-<!-- ✅ BLOCO 1: ITEM POR LINHA -->
 <div class="card">
 <h3>Adicionar item (manual)</h3>
 <input id="l_cod" placeholder="Código">
@@ -60,15 +57,12 @@ Cobertura: <input type="number" id="cobertura" value="3">
 <button onclick="addLoteItem()">Adicionar</button>
 </div>
 
-<!-- ✅ BLOCO 2: COLAR EXCEL -->
 <div class="card">
-<h3>Ou colar vários do Excel</h3>
-<p>Formato: Código | Descrição | Saldo | Qtd</p>
+<h3>Colar Excel</h3>
 <textarea id="excelInput"></textarea>
 <button onclick="importarExcel()">Importar Excel</button>
 </div>
 
-<!-- LISTA DO LOTE -->
 <div class="card">
 <h3>Itens adicionados</h3>
 <table>
@@ -96,42 +90,44 @@ function abrir(id,el){
  el.classList.add('ativo');
 }
 
-// ✅ adicionar manual
+function calcularNec(saldo,qtd){
+ const cobertura=Number(document.getElementById('cobertura').value)||0;
+ return Math.max((qtd*cobertura)-saldo,0);
+}
+
+// ✅ RECALCULAR AUTOMÁTICO
+function recalcularTudo(){
+ items.forEach(i=>{
+  i.nec = calcularNec(i.saldo,i.qtd);
+ });
+ render();
+}
+
+// ✅ ADICIONAR MANUAL
 function addLoteItem(){
- const cod=l_cod.value;
- const desc=l_desc.value;
- const saldo=Number(l_saldo.value)||0;
- const qtd=Number(l_qtd.value)||0;
-
- if(!cod){alert('Informe o código');return}
-
+ let cod=l_cod.value;
+ let desc=l_desc.value;
+ let saldo=Number(l_saldo.value)||0;
+ let qtd=Number(l_qtd.value)||0;
+ if(!cod)return;
  lote.push({cod,desc,saldo,qtd});
  renderLote();
-
  l_cod.value='';l_desc.value='';l_saldo.value='';l_qtd.value='';
 }
 
-// ✅ importar Excel
+// ✅ IMPORTAR EXCEL
 function importarExcel(){
- const linhas=excelInput.value.split('\n');
-
+ let linhas=excelInput.value.split('\n');
  linhas.forEach(l=>{
   let col=l.split('\t');
-
   if(col.length>=4){
    let cod=col[0]?.trim();
    let desc=col[1]?.trim();
-   let saldo=Number(col[2]);
-   let qtd=Number(col[3]);
-
-   if(!cod) return;
-   if(isNaN(saldo)) saldo=0;
-   if(isNaN(qtd)) qtd=0;
-
-   lote.push({cod,desc,saldo,qtd});
+   let saldo=Number(col[2])||0;
+   let qtd=Number(col[3])||0;
+   if(cod) lote.push({cod,desc,saldo,qtd});
   }
  });
-
  renderLote();
  excelInput.value='';
 }
@@ -139,35 +135,38 @@ function importarExcel(){
 function renderLote(){
  let html='';
  lote.forEach((i,idx)=>{
-  html+=`<tr>
-   <td>${i.cod}</td>
-   <td>${i.desc}</td>
-   <td>${i.saldo}</td>
-   <td>${i.qtd}</td>
-   <td><button onclick="removerLote(${idx})">X</button></td>
-  </tr>`;
+  html+=`<tr><td>${i.cod}</td><td>${i.desc}</td><td>${i.saldo}</td><td>${i.qtd}</td><td><button onclick="removerLote(${idx})">X</button></td></tr>`;
  });
  loteLista.innerHTML=html;
 }
 
 function removerLote(i){lote.splice(i,1);renderLote();}
 
-// ✅ envio para operação
+// ✅ ENVIO PARA OPERAÇÃO
 function confirmarLote(){
- const cobertura=Number(cobertura.value)||0;
-
  lote.forEach(i=>{
-  let nec=Math.max((i.qtd * cobertura)-i.saldo,0);
+  let nec=calcularNec(i.saldo,i.qtd);
   items.push({...i,nec});
  });
-
  lote=[];
  renderLote();
  render();
  abrir('operacao',document.querySelector('.tab'));
 }
 
-// tabela principal
+// ✅ EDITAR ITEM
+function editar(idx){
+ let i=items[idx];
+ l_cod.value=i.cod;
+ l_desc.value=i.desc;
+ l_saldo.value=i.saldo;
+ l_qtd.value=i.qtd;
+ items.splice(idx,1);
+ render();
+ abrir('lote',document.querySelectorAll('.tab')[1]);
+}
+
+// ✅ TABELA
 function render(){
  let html='';
  items.forEach((i,idx)=>{
@@ -177,7 +176,10 @@ function render(){
    <td>${i.saldo}</td>
    <td>${i.qtd}</td>
    <td>${i.nec}</td>
-   <td><button onclick="remover(${idx})">X</button></td>
+   <td>
+    <button onclick="editar(${idx})">Editar</button>
+    <button onclick="remover(${idx})">X</button>
+   </td>
   </tr>`;
  });
  lista.innerHTML=html;
