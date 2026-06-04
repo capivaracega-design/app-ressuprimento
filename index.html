@@ -15,23 +15,32 @@ h1{color:#0b3d91}
 
 <h1>Ressuprimento VNS</h1>
 
-<div>
-  <div class="tab ativo" onclick="abrir('operacao',this)">Operação</div>
-  <div class="tab" onclick="abrir('cadastro',this)">Cadastro de Itens</div>
+<div class="card" id="loginBox">
+<h3>Login</h3>
+<input id="email" placeholder="Email">
+<input id="senha" type="password" placeholder="Senha">
+<br>
+<button onclick="login()">Entrar</button>
+<button onclick="registrar()">Cadastrar</button>
 </div>
 
-<!-- ================= ABA OPERAÇÃO ================= -->
-<div id="operacao">
+<div id="app" style="display:none">
+<p>Usuário: <span id="userEmail"></span> <button onclick="logout()">Sair</button></p>
 
+<div>
+  <div class="tab ativo" onclick="abrir('operacao',this)">Operação</div>
+  <div class="tab" onclick="abrir('cadastro',this)">Cadastro</div>
+</div>
+
+<div id="operacao">
 <div class="card">
 Cobertura: <input type="number" id="cobertura" value="3">
 <select id="torreEndereco">
-  <option value="1">Torre 1</option>
-  <option value="2">Torre 2</option>
+<option value="1">T1</option>
+<option value="2">T2</option>
 </select>
-
 Data: <input type="date" id="dataPedido">
-<button onclick="salvarPedido()">Salvar Pedido</button>
+<button onclick="salvarPedido()">Salvar</button>
 </div>
 
 <div class="card">
@@ -48,7 +57,7 @@ Data: <input type="date" id="dataPedido">
 </div>
 
 <div class="card">
-<h3>Histórico por Data</h3>
+<h3>Histórico</h3>
 <input type="date" id="buscarData" onchange="carregarHistorico()">
 <div id="historico"></div>
 </div>
@@ -56,102 +65,141 @@ Data: <input type="date" id="dataPedido">
 <button onclick="exportar()">Exportar Excel</button>
 </div>
 
-<!-- ================= ABA CADASTRO ================= -->
 <div id="cadastro" style="display:none">
 <div class="card">
-<h3>Cadastro em lote (colar do Excel)</h3>
 <textarea id="lote" style="width:100%;height:150px"></textarea><br>
 <button onclick="importar()">Importar Cadastro</button>
 </div>
 </div>
+</div>
+
+<!-- ✅ FIREBASE CORRETO -->
+https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
 <script>
-let cadastro = JSON.parse(localStorage.getItem("cadastro")) || {};
+const firebaseConfig = {
+  apiKey: "AIzaSyAzoads1OH6SEKU5UxlAUYgBPEmO_hy2w4",
+  authDomain: "ressuprimento-vns.firebaseapp.com",
+  projectId: "ressuprimento-vns",
+  storageBucket: "ressuprimento-vns.firebasestorage.app",
+  messagingSenderId: "562110480825",
+  appId: "1:562110480825:web:02a5afaaa130b5dbacf668"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
 let items = [];
+let cadastro = {};
+
+function registrar(){
+ auth.createUserWithEmailAndPassword(email.value, senha.value)
+ .then(()=>alert('Usuário criado'))
+ .catch(e=>alert(e.message));
+}
+
+function login(){
+ auth.signInWithEmailAndPassword(email.value, senha.value);
+}
+
+function logout(){ auth.signOut(); }
+
+auth.onAuthStateChanged(user=>{
+ if(user){
+ loginBox.style.display='none';
+ app.style.display='block';
+ userEmail.innerText=user.email;
+ carregarCadastro();
+ } else {
+ loginBox.style.display='block';
+ app.style.display='none';
+ }
+});
 
 function abrir(id,el){
- document.getElementById('operacao').style.display='none';
- document.getElementById('cadastro').style.display='none';
+ operacao.style.display='none';
+ cadastro.style.display='none';
  document.getElementById(id).style.display='block';
  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('ativo'));
  el.classList.add('ativo');
 }
 
 function importar(){
- const texto = document.getElementById('lote').value;
- texto.split("\n").forEach(l=>{
- const [cod,desc,t1,t2]=l.split(/[\,\t]/);
+ lote.value.split('\n').forEach(l=>{
+ let [cod,desc,t1,t2]=l.split(/[,\t]/);
  if(cod){
- cadastro[cod.trim()]={desc:desc?.trim(),t1:t1?.trim(),t2:t2?.trim()};
+ db.collection('cadastro').doc(cod.trim()).set({desc,t1,t2});
  }
  });
- localStorage.setItem("cadastro",JSON.stringify(cadastro));
- alert('Cadastro importado com sucesso');
+ alert('Cadastro salvo na nuvem');
+}
+
+function carregarCadastro(){
+ db.collection('cadastro').onSnapshot(s=>{
+ cadastro={};
+ s.forEach(doc=>cadastro[doc.id]=doc.data());
+ });
 }
 
 function addItem(){
- let cod=document.getElementById('cod').value;
- let desc=document.getElementById('desc').value;
- let cons=Number(document.getElementById('consumo').value);
- let saldo=Number(document.getElementById('saldo').value);
- let cob=Number(document.getElementById('cobertura').value);
-
- if(cadastro[cod] && !desc){desc=cadastro[cod].desc}
-
- let nec=(cons*cob)-saldo; if(nec<0) nec=0;
+ let cod=codEl().value;
+ let desc=descEl().value || cadastro[cod]?.desc || '';
+ let cons=Number(consEl().value);
+ let saldo=Number(saldoEl().value);
+ let nec=(cons*cobertura.value)-saldo; if(nec<0) nec=0;
  items.push({cod,desc,cons,saldo,nec});
  render();
 }
 
 function render(){
- let div=document.getElementById('lista'); div.innerHTML='';
+ lista.innerHTML='';
  items.forEach((i,index)=>{
- div.innerHTML+=`${i.cod} - ${i.desc} | Nec:${i.nec} <button onclick="remover(${index})">Excluir</button><br>`;
- })
+ lista.innerHTML+=`${i.cod} - ${i.desc} | ${i.nec} <button onclick="remover(${index})">X</button><br>`;
+ });
 }
 
 function remover(i){ items.splice(i,1); render(); }
 
 function salvarPedido(){
- let data=document.getElementById('dataPedido').value;
+ let data=dataPedido.value;
  if(!data){alert('Selecione a data');return;}
-
- let historico=JSON.parse(localStorage.getItem('historico'))||{};
- historico[data]=items;
- localStorage.setItem('historico',JSON.stringify(historico));
- alert('Pedido salvo');
+ items.forEach(i=> db.collection('pedidos').add({data,usuario:userEmail.innerText,...i}));
+ alert('Salvo online ✅');
 }
 
 function carregarHistorico(){
- let data=document.getElementById('buscarData').value;
- let historico=JSON.parse(localStorage.getItem('historico'))||{};
- let div=document.getElementById('historico');
- div.innerHTML='';
-
- if(historico[data]){
- historico[data].forEach(i=>{
- div.innerHTML+=`${i.cod} - ${i.desc} | Nec:${i.nec}<br>`;
+ let data=buscarData.value;
+ db.collection('pedidos').where('data','==',data)
+ .onSnapshot(s=>{
+ historico.innerHTML='';
+ s.forEach(doc=>{
+ let i=doc.data();
+ historico.innerHTML+=`${i.cod} - ${i.desc} | ${i.nec} | ${i.usuario}<br>`;
  });
- } else {
- div.innerHTML='Nenhum registro nessa data';
- }
+ });
 }
 
 function exportar(){
- let torre=document.getElementById('torreEndereco').value;
- let csv="Codigo,Descricao,Consumo,Saldo,Necessidade,Endereco\n";
-
+ let torre=torreEndereco.value;
+ let csv='Codigo,Descricao,Necessidade,Endereco\n';
  items.forEach(i=>{
- let end=cadastro[i.cod]? (torre=="1"?cadastro[i.cod].t1:cadastro[i.cod].t2):"";
- csv+=`${i.cod},${i.desc},${i.cons},${i.saldo},${i.nec},${end}\n`;
+ let end=cadastro[i.cod]? (torre=='1'?cadastro[i.cod].t1:cadastro[i.cod].t2):'';
+ csv+=`${i.cod},${i.desc},${i.nec},${end}\n`;
  });
-
  let blob=new Blob([csv]);
- let a=document.createElement('a'); 
+ let a=document.createElement('a');
  a.href=URL.createObjectURL(blob);
- a.download='ressuprimento.csv'; 
+ a.download='ressuprimento.csv';
  a.click();
 }
+
+function codEl(){return document.getElementById('cod');}
+function descEl(){return document.getElementById('desc');}
+function consEl(){return document.getElementById('consumo');}
+function saldoEl(){return document.getElementById('saldo');}
 </script>
 
 </body>
