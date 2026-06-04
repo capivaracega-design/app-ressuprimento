@@ -4,50 +4,16 @@
 <meta charset="UTF-8">
 <title>Ressuprimento VNS</title>
 <style>
-body{
- font-family:Arial;
- background:#f4f1ec;
- margin:0;
-}
-.header{
- background:#b58b63;
- color:white;
- padding:20px;
- display:flex;
- align-items:center;
- gap:20px;
-}
-.logo{
- font-weight:bold;
- font-size:22px;
-}
-.subtitle{
- font-size:18px;
-}
-.container{
- padding:20px;
-}
-.card{
- background:white;
- padding:15px;
- margin-bottom:10px;
- border-radius:6px;
- border-left:5px solid #8a5a34;
-}
-input,select{
- margin:5px;
- padding:6px;
- border:1px solid #ccc;
- border-radius:4px;
-}
-button{
- background:#8a5a34;
- color:white;
- border:none;
- padding:6px 14px;
- cursor:pointer;
- border-radius:4px;
-}
+body{font-family:Arial;background:#f4f1ec;margin:0}
+.header{background:#b58b63;color:#fff;padding:20px;display:flex;gap:20px}
+.logo{font-weight:bold;font-size:22px}
+.container{padding:20px}
+.tab{display:inline-block;padding:10px 15px;margin-right:5px;background:#ddd;cursor:pointer;border-radius:5px}
+.ativo{background:#8a5a34;color:#fff}
+.card{background:#fff;padding:15px;margin-top:10px;border-left:5px solid #8a5a34;border-radius:6px}
+input,select,textarea{margin:5px;padding:6px;border:1px solid #ccc;border-radius:4px}
+textarea{width:100%;height:120px}
+button{background:#8a5a34;color:#fff;border:none;padding:6px 14px;cursor:pointer;border-radius:4px}
 button:hover{background:#6f4728}
 h3{color:#8a5a34}
 </style>
@@ -56,125 +22,145 @@ h3{color:#8a5a34}
 
 <div class="header">
  <div class="logo">VILA NOVA STAR</div>
- <div class="subtitle">Ressuprimento</div>
+ <div>Ressuprimento</div>
 </div>
 
 <div class="container">
 
-<div class="card">
-<label><b>Nome do responsável:</b></label><br>
-<input id="nomeUsuario" placeholder="Digite seu nome">
+<div>
+ <div class="tab ativo" onclick="abrir('operacao',this)">Operação</div>
+ <div class="tab" onclick="abrir('cadastro',this)">Cadastro Endereços</div>
+ <div class="tab" onclick="abrir('importacao',this)">Importar Pedido CD</div>
 </div>
 
+<!-- OPERAÇÃO -->
+<div id="operacao">
 <div class="card">
+Nome: <input id="nomeUsuario">
 Cobertura: <input type="number" id="cobertura" value="3">
-<select id="torreEndereco">
-<option value="1">Torre 1</option>
-<option value="2">Torre 2</option>
-</select>
+<select id="torreEndereco"><option value="1">T1</option><option value="2">T2</option></select>
 Data: <input type="date" id="dataPedido">
-<button onclick="salvarPedido()">Salvar Pedido</button>
+<button onclick="salvarPedido()">Salvar</button>
 </div>
 
 <div class="card">
-<input id="cod" placeholder="Código">
+<input id="codInput" placeholder="Código">
 <input id="desc" placeholder="Descrição">
 <input id="consumo" placeholder="Consumo">
 <input id="saldo" placeholder="Saldo">
 <button onclick="addItem()">Adicionar</button>
 </div>
 
-<div class="card">
-<h3>Itens</h3>
-<div id="lista"></div>
-</div>
-
-<div class="card">
-<h3>Histórico</h3>
+<div class="card"><h3>Itens</h3><div id="lista"></div></div>
+<div class="card"><h3>Histórico</h3>
 <input type="date" id="buscarData" onchange="carregarHistorico()">
-<div id="historico"></div>
+<div id="historico"></div></div>
+
+<button onclick="exportar()">Exportar</button>
 </div>
 
-<button onclick="exportar()">Exportar Excel</button>
+<!-- CADASTRO -->
+<div id="cadastro" style="display:none">
+<div class="card">
+<h3>Colar cadastro (Código,Descrição,T1,T2)</h3>
+<textarea id="loteCadastro"></textarea>
+<button onclick="importarCadastro()">Salvar Cadastro</button>
+</div>
+</div>
+
+<!-- IMPORTAÇÃO -->
+<div id="importacao" style="display:none">
+<div class="card">
+<h3>Colar pedido CD (Código,Consumo,Saldo)</h3>
+<textarea id="lotePedido"></textarea>
+<button onclick="importarPedido()">Carregar</button>
+</div>
+</div>
 
 </div>
 
-<!-- ✅ FIREBASE CORRIGIDO -->
+<!-- ✅ FIREBASE CORRETO -->
 https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyAzoads1OH6SEKU5UxlAUYgBPEmO_hy2w4",
-  authDomain: "ressuprimento-vns.firebaseapp.com",
-  projectId: "ressuprimento-vns",
-  storageBucket: "ressuprimento-vns.firebasestorage.app",
-  messagingSenderId: "562110480825",
-  appId: "1:562110480825:web:02a5afaaa130b5dbacf668"
-};
-
+const firebaseConfig={apiKey:"AIzaSyAzoads1OH6SEKU5UxlAUYgBPEmO_hy2w4",authDomain:"ressuprimento-vns.firebaseapp.com",projectId:"ressuprimento-vns"};
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const db=firebase.firestore();
 
-let items = [];
-let cadastro = {};
+let items=[];let cadastro={};
 
-function carregarCadastro(){
- db.collection('cadastro').onSnapshot(s=>{
- cadastro={};
- s.forEach(doc=>cadastro[doc.id]=doc.data());
- });
-}
+function abrir(id,el){['operacao','cadastro','importacao'].forEach(i=>document.getElementById(i).style.display='none');document.getElementById(id).style.display='block';document.querySelectorAll('.tab').forEach(t=>t.classList.remove('ativo'));el.classList.add('ativo')}
+
+function carregarCadastro(){db.collection('cadastro').onSnapshot(s=>{cadastro={};s.forEach(d=>cadastro[d.id]=d.data())})}
 carregarCadastro();
 
+function importarCadastro(){
+ document.getElementById('loteCadastro').value.split('\n').forEach(l=>{
+ let [cod,desc,t1,t2]=l.split(/[,\t]/);
+ if(cod){db.collection('cadastro').doc(cod.trim()).set({desc,t1,t2});}
+ });
+ alert('Cadastro salvo');
+}
+
+function importarPedido(){
+ items=[];
+ document.getElementById('lotePedido').value.split('\n').forEach(l=>{
+ let [cod,cons,saldo]=l.split(/[,\t]/);
+ if(cod){
+ let desc=cadastro[cod]?.desc||'';
+ let nec=(Number(cons)*Number(cobertura.value))-Number(saldo);
+ if(nec<0) nec=0;
+ items.push({cod,desc,cons:Number(cons),saldo:Number(saldo),nec});
+ }
+ });
+ render();
+}
+
 function addItem(){
- let cod=codEl().value;
- let desc=descEl().value || cadastro[cod]?.desc || '';
- let cons=Number(consEl().value);
- let saldo=Number(saldoEl().value);
- let nec=(cons*cobertura.value)-saldo; if(nec<0) nec=0;
- items.push({cod,desc,cons,saldo,nec});
+ let cod=document.getElementById('codInput').value;
+ let desc=document.getElementById('desc').value||cadastro[cod]?.desc||'';
+ let cons=Number(consumo.value);
+ let saldoVal=Number(saldo.value);
+ let nec=(cons*Number(cobertura.value))-saldoVal;
+ if(nec<0) nec=0;
+ items.push({cod,desc,cons,saldo:saldoVal,nec});
  render();
 }
 
 function render(){
- lista.innerHTML='';
- items.forEach((i,index)=>{
- lista.innerHTML+=`${i.cod} - ${i.desc} | ${i.nec} <button onclick="remover(${index})">X</button><br>`;
+ let html='';
+ items.forEach((i,idx)=>{
+ html+=`${i.cod} - ${i.desc} | Nec: ${i.nec} <button onclick="remover(${idx})">X</button><br>`;
  });
+ document.getElementById('lista').innerHTML=html;
 }
 
-function remover(i){ items.splice(i,1); render(); }
+function remover(i){items.splice(i,1);render()}
 
 function salvarPedido(){
- let data=dataPedido.value;
- let usuario=document.getElementById('nomeUsuario').value;
-
- if(!data){alert('Selecione a data');return;}
- if(!usuario){alert('Informe seu nome');return;}
-
- items.forEach(i=> db.collection('pedidos').add({data,usuario,...i}));
- alert('Salvo online ✅');
- items=[]; render();
+ if(!dataPedido.value||!nomeUsuario.value){alert('Preencher nome e data');return}
+ items.forEach(i=>db.collection('pedidos').add({data:dataPedido.value,usuario:nomeUsuario.value,...i}));
+ alert('Salvo ✅');
+ items=[];render();
 }
 
 function carregarHistorico(){
- let data=buscarData.value;
- db.collection('pedidos').where('data','==',data)
- .onSnapshot(s=>{
- historico.innerHTML='';
- s.forEach(doc=>{
- let i=doc.data();
- historico.innerHTML+=`${i.cod} - ${i.desc} | ${i.nec} | ${i.usuario}<br>`;
+ db.collection('pedidos').where('data','==',buscarData.value).onSnapshot(s=>{
+ let html='';
+ s.forEach(d=>{
+ let i=d.data();
+ html+=`${i.cod} - ${i.desc} | ${i.nec} | ${i.usuario}<br>`;
  });
- });
+ document.getElementById('historico').innerHTML=html;
+ })
 }
 
 function exportar(){
  let torre=torreEndereco.value;
  let csv='Codigo,Descricao,Necessidade,Endereco\n';
  items.forEach(i=>{
- let end=cadastro[i.cod]? (torre=='1'?cadastro[i.cod].t1:cadastro[i.cod].t2):'';
+ let end=cadastro[i.cod]?(torre=='1'?cadastro[i.cod].t1:cadastro[i.cod].t2):'';
  csv+=`${i.cod},${i.desc},${i.nec},${end}\n`;
  });
  let blob=new Blob([csv]);
@@ -183,11 +169,6 @@ function exportar(){
  a.download='ressuprimento.csv';
  a.click();
 }
-
-function codEl(){return document.getElementById('cod');}
-function descEl(){return document.getElementById('desc');}
-function consEl(){return document.getElementById('consumo');}
-function saldoEl(){return document.getElementById('saldo');}
 </script>
 
 </body>
