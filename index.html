@@ -2,146 +2,135 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Ressuprimento Hospitalar</title>
+<title>Ressuprimento - Vila Nova Star</title>
 <style>
-  body { font-family: Arial; padding:20px; background:#f5f6fa; }
-  h1 { color:#2f3640; }
-  input, select { padding:5px; margin:4px; }
-  button { padding:6px 10px; margin:4px; cursor:pointer; }
-  .card { background:white; padding:15px; border-radius:8px; margin-bottom:10px; box-shadow:0px 2px 5px rgba(0,0,0,0.1); }
-  .item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #ddd; }
+body { font-family: Arial; background:#f1f3f6; padding:20px; }
+h1 { color:#0b3d91; }
+.card { background:#fff; padding:15px; margin-bottom:10px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+.item { display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding:6px; }
+button { background:#0b3d91; color:#fff; border:none; padding:6px 10px; cursor:pointer; }
 </style>
 </head>
 <body>
 
-<h1>Ressuprimento entre Torres</h1>
+<h1>Ressuprimento entre Torres - VNS</h1>
 
 <div class="card">
-  Cobertura (dias): <input type="number" id="cobertura" value="3">
-  Torre Origem: <input id="origem" placeholder="Ex: Torre A">
-  Torre Destino: <input id="destino" placeholder="Ex: Torre B">
+Cobertura: <input type="number" id="cobertura" value="3">
+Torre Endereço:
+<select id="torreEndereco">
+<option value="1">Torre 1</option>
+<option value="2">Torre 2</option>
+</select>
+<button onclick="salvarPedido()">Salvar</button>
 </div>
 
 <div class="card">
-  <input id="cod" placeholder="Código">
-  <input id="desc" placeholder="Descrição">
-  <input id="consumo" placeholder="Consumo diário">
-  <input id="saldo" placeholder="Saldo destino">
-  <input type="date" id="data">
-  <br>
-  <button onclick="addItem()">Adicionar</button>
+<input id="cod" placeholder="Código">
+<input id="desc" placeholder="Descrição (auto ou manual)">
+<input id="consumo" placeholder="Consumo">
+<input id="saldo" placeholder="Saldo">
+<button onclick="addItem()">Adicionar</button>
 </div>
 
 <div class="card">
-  <input id="busca" placeholder="Buscar código ou nome" onkeyup="filtrar()">
+<h3>Itens</h3>
+<div id="lista"></div>
 </div>
 
 <div class="card">
-  <h3>Itens</h3>
-  <div id="lista"></div>
+<h3>Histórico por Data</h3>
+<input type="date" id="filtroData" onchange="carregarHistorico()">
+<div id="historico"></div>
 </div>
-
-<div class="card">
-  <h3>Total do Pedido: <span id="total">0</span></h3>
-</div>
-
-<button onclick="exportarExcel()">Exportar (CSV)</button>
 
 <script>
+// Banco de itens automáticos
+const cadastro = {
+ "152157": { desc:"salina", t1:"A-01", t2:"B-01" },
+ "348031": { desc:"equipo", t1:"A-02", t2:"B-02" }
+};
+
 let items = [];
 
-function addItem() {
-  const cod = codField().value;
-  const desc = descField().value;
-  const consumo = Number(consumoField().value);
-  const saldo = Number(saldoField().value);
-  const cobertura = Number(document.getElementById("cobertura").value);
+function addItem(){
+ let cod = codEl().value;
+ let desc = descEl().value;
+ let consumo = Number(consEl().value);
+ let saldo = Number(saldoEl().value);
+ let cobertura = Number(document.getElementById("cobertura").value);
 
-  let nec = (consumo * cobertura) - saldo;
-  if (nec < 0) nec = 0;
+ // preencher automático
+ if(cadastro[cod]){
+   if(!desc) desc = cadastro[cod].desc;
+ }
 
-  items.push({ cod, desc, consumo, saldo, nec });
-  render();
-  limpar();
+ let nec = (consumo * cobertura) - saldo;
+ if(nec < 0) nec = 0;
+
+ items.push({ cod, desc, consumo, saldo, nec });
+ render(); limpar();
 }
 
-function render() {
-  const lista = document.getElementById("lista");
-  lista.innerHTML = "";
-  let total = 0;
-
-  items.forEach((i, index) => {
-    total += i.nec;
-
-    const div = document.createElement("div");
-    div.className = "item";
-    div.innerHTML = `
-      <span>${i.cod} - ${i.desc} | Nec: ${i.nec}</span>
-      <div>
-        <button onclick="editar(${index})">Editar</button>
-        <button onclick="remover(${index})">Excluir</button>
-      </div>
-    `;
-    lista.appendChild(div);
-  });
-
-  document.getElementById("total").innerText = total;
+function render(){
+ let lista = document.getElementById("lista");
+ lista.innerHTML = "";
+ items.forEach((i,index)=>{
+ let div = document.createElement("div");
+ div.className="item";
+ div.innerHTML = `${i.cod} - ${i.desc} | Nec: ${i.nec}
+ <button onclick="remover(${index})">Excluir</button>`;
+ lista.appendChild(div);
+ });
 }
 
-function remover(index) {
-  items.splice(index,1);
-  render();
+function remover(i){ items.splice(i,1); render(); }
+
+function salvarPedido(){
+ let data = new Date().toISOString().split("T")[0];
+ let historico = JSON.parse(localStorage.getItem("historico")) || {};
+ historico[data] = items;
+ localStorage.setItem("historico", JSON.stringify(historico));
+ alert("Salvo com sucesso");
 }
 
-function editar(index) {
-  const item = items[index];
-  codField().value = item.cod;
-  descField().value = item.desc;
-  consumoField().value = item.consumo;
-  saldoField().value = item.saldo;
-  remover(index);
+function carregarHistorico(){
+ let data = document.getElementById("filtroData").value;
+ let historico = JSON.parse(localStorage.getItem("historico")) || {};
+ let div = document.getElementById("historico");
+ div.innerHTML = "";
+ if(historico[data]){
+ historico[data].forEach(i=>{
+ div.innerHTML += `${i.cod} - ${i.desc} | ${i.nec}<br>`;
+ });
+ }
 }
 
-function filtrar() {
-  const texto = document.getElementById("busca").value.toLowerCase();
-  const lista = document.getElementById("lista");
-  lista.innerHTML = "";
-
-  items.filter(i => i.cod.includes(texto) || i.desc.toLowerCase().includes(texto))
-       .forEach((i,index) => {
-        const div = document.createElement("div");
-        div.className = "item";
-        div.innerHTML = `${i.cod} - ${i.desc} | Nec: ${i.nec}`;
-        lista.appendChild(div);
-       });
+function exportar(){
+ let torre = document.getElementById("torreEndereco").value;
+ let csv = "Codigo,Descricao,Consumo,Saldo,Necessidade,Endereco\n";
+ items.forEach(i=>{
+ let end="";
+ if(cadastro[i.cod]){
+ end = torre=="1" ? cadastro[i.cod].t1 : cadastro[i.cod].t2;
+ }
+ csv += `${i.cod},${i.desc},${i.consumo},${i.saldo},${i.nec},${end}\n`;
+ });
+ let blob = new Blob([csv]);
+ let a = document.createElement("a");
+ a.href = URL.createObjectURL(blob);
+ a.download = "ressuprimento.csv";
+ a.click();
 }
 
-function exportarExcel() {
-  let csv = "Codigo,Descricao,Consumo,Saldo,Necessidade\n";
-  items.forEach(i => {
-    csv += `${i.cod},${i.desc},${i.consumo},${i.saldo},${i.nec}\n`;
-  });
-
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = "ressuprimento.csv";
-  link.click();
-}
-
-function limpar() {
-  codField().value = "";
-  descField().value = "";
-  consumoField().value = "";
-  saldoField().value = "";
-}
-
-function codField(){ return document.getElementById("cod"); }
-function descField(){ return document.getElementById("desc"); }
-function consumoField(){ return document.getElementById("consumo"); }
-function saldoField(){ return document.getElementById("saldo"); }
-
+function limpar(){ codEl().value=""; descEl().value=""; consEl().value=""; saldoEl().value=""; }
+function codEl(){ return document.getElementById("cod"); }
+function descEl(){ return document.getElementById("desc"); }
+function consEl(){ return document.getElementById("consumo"); }
+function saldoEl(){ return document.getElementById("saldo"); }
 </script>
+
+<button onclick="exportar()">Exportar Excel</button>
 
 </body>
 </html>
