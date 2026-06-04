@@ -31,7 +31,6 @@ textarea{width:100%;height:140px}
 
 <!-- OPERAÇÃO -->
 <div id="operacao">
-
 <div class="card">
 <input id="nomeUsuario" placeholder="Nome">
 </div>
@@ -41,11 +40,6 @@ Cobertura: <input type="number" id="cobertura" value="3">
 </div>
 
 <div class="card">
-<input id="cod" placeholder="Código">
-<input id="desc" placeholder="Descrição">
-<input id="consumo" placeholder="Consumo">
-<input id="saldo" placeholder="Saldo">
-<button onclick="addItem()">Adicionar</button>
 <button onclick="exportar()">Exportar Excel</button>
 </div>
 
@@ -53,20 +47,33 @@ Cobertura: <input type="number" id="cobertura" value="3">
 <h3>Itens</h3>
 <table>
 <thead>
-<tr><th>Código</th><th>Descrição</th><th>Necessidade</th><th></th></tr>
+<tr><th>Código</th><th>Descrição</th><th>Saldo</th><th>Qtd</th><th>Necessidade</th><th></th></tr>
 </thead>
 <tbody id="lista"></tbody>
 </table>
 </div>
-
 </div>
 
-<!-- LOTE -->
+<!-- LOTE NOVO -->
 <div id="lote" style="display:none">
 <div class="card">
-<h3>Colar itens (Código Descrição Saldo Qtd)</h3>
-<textarea id="entrada"></textarea>
-<button onclick="importarLote()">Carregar itens</button>
+<h3>Adicionar item (por linha)</h3>
+<input id="l_cod" placeholder="Código">
+<input id="l_desc" placeholder="Descrição">
+<input id="l_saldo" placeholder="Saldo Torre">
+<input id="l_qtd" placeholder="Qtd CD">
+<button onclick="addLoteItem()">Adicionar na lista</button>
+</div>
+
+<div class="card">
+<h3>Itens adicionados</h3>
+<table>
+<thead>
+<tr><th>Código</th><th>Descrição</th><th>Saldo</th><th>Qtd</th><th></th></tr>
+</thead>
+<tbody id="loteLista"></tbody>
+</table>
+<button onclick="confirmarLote()">Enviar para Operação</button>
 </div>
 </div>
 
@@ -74,6 +81,7 @@ Cobertura: <input type="number" id="cobertura" value="3">
 
 <script>
 let items=[];
+let lote=[];
 
 function abrir(id,el){
  document.getElementById('operacao').style.display='none';
@@ -83,59 +91,74 @@ function abrir(id,el){
  el.classList.add('ativo');
 }
 
-function addItem(){
- const cod=document.getElementById('cod').value;
- const desc=document.getElementById('desc').value;
- const consumo=Number(document.getElementById('consumo').value)||0;
- const saldo=Number(document.getElementById('saldo').value)||0;
- const cobertura=Number(document.getElementById('cobertura').value)||0;
+// ✅ adicionar item no lote (um por vez)
+function addLoteItem(){
+ const cod=document.getElementById('l_cod').value;
+ const desc=document.getElementById('l_desc').value;
+ const saldo=Number(document.getElementById('l_saldo').value)||0;
+ const qtd=Number(document.getElementById('l_qtd').value)||0;
 
- if(!cod){alert('Digite código');return;}
+ if(!cod){alert('Informe o código');return}
 
- const nec=Math.max((consumo*cobertura)-saldo,0);
- items.push({cod,desc,nec});
- render();
- limpar();
+ lote.push({cod,desc,saldo,qtd});
+ renderLote();
+
+ // limpar
+ l_cod.value='';l_desc.value='';l_saldo.value='';l_qtd.value='';
 }
 
-function importarLote(){
- const texto=document.getElementById('entrada').value.split('\n');
+function renderLote(){
+ let html='';
+ lote.forEach((i,idx)=>{
+  html+=`<tr>
+    <td>${i.cod}</td>
+    <td>${i.desc}</td>
+    <td>${i.saldo}</td>
+    <td>${i.qtd}</td>
+    <td><button onclick="removerLote(${idx})">X</button></td>
+  </tr>`;
+ });
+ document.getElementById('loteLista').innerHTML=html;
+}
+
+function removerLote(i){lote.splice(i,1);renderLote();}
+
+// ✅ envia tudo para operação com cálculo
+function confirmarLote(){
  const cobertura=Number(document.getElementById('cobertura').value)||0;
 
- texto.forEach(l=>{
-  let p=l.trim().split(/\s+/);
-  if(p.length>=3){
-   let cod=p[0];
-   let qtd=Number(p[p.length-1]);
-   let saldo=Number(p[p.length-2]);
-   let desc=p.slice(1,p.length-2).join(' ');
-
-   let nec=Math.max((qtd*cobertura)-saldo,0);
-   items.push({cod,desc,nec});
-  }
+ lote.forEach(i=>{
+  let nec=Math.max((i.qtd * cobertura) - i.saldo,0);
+  items.push({...i,nec});
  });
 
+ lote=[];
+ renderLote();
  render();
  abrir('operacao',document.querySelector('.tab'));
 }
 
+// tabela principal
 function render(){
  let html='';
  items.forEach((i,idx)=>{
-  html+=`<tr><td>${i.cod}</td><td>${i.desc}</td><td>${i.nec}</td><td><button onclick="remover(${idx})">X</button></td></tr>`;
+  html+=`<tr>
+   <td>${i.cod}</td>
+   <td>${i.desc}</td>
+   <td>${i.saldo}</td>
+   <td>${i.qtd}</td>
+   <td>${i.nec}</td>
+   <td><button onclick="remover(${idx})">X</button></td>
+  </tr>`;
  });
  lista.innerHTML=html;
 }
 
 function remover(i){items.splice(i,1);render();}
 
-function limpar(){
- cod.value='';desc.value='';consumo.value='';saldo.value='';
-}
-
 function exportar(){
- let csv='Codigo,Descricao,Necessidade\n';
- items.forEach(i=>csv+=`${i.cod},${i.desc},${i.nec}\n`);
+ let csv='Codigo,Descricao,Saldo,Qtd,Necessidade\n';
+ items.forEach(i=>csv+=`${i.cod},${i.desc},${i.saldo},${i.qtd},${i.nec}\n`);
  let blob=new Blob([csv]);
  let a=document.createElement('a');
  a.href=URL.createObjectURL(blob);
