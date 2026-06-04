@@ -8,8 +8,8 @@ body{font-family:Arial;background:#f4f1ec;margin:0}
 .header{background:#b58b63;color:#fff;padding:20px}
 .container{padding:20px}
 .card{background:#fff;padding:15px;margin-bottom:10px;border-radius:6px;border-left:5px solid #8a5a34}
-input,select,textarea{margin:5px;padding:6px}
-button{background:#8a5a34;color:#fff;border:none;padding:6px 12px;cursor:pointer;border-radius:4px}
+input{margin:5px;padding:6px}
+button{background:#8a5a34;color:#fff;border:none;padding:6px 12px;cursor:pointer;border-radius:4px;margin:2px}
 table{width:100%;border-collapse:collapse;margin-top:10px}
 th,td{border:1px solid #ddd;padding:6px}
 th{background:#8a5a34;color:#fff}
@@ -38,13 +38,14 @@ Data: <input type="date" id="dataPedido">
 <input id="consumo" placeholder="Consumo">
 <input id="saldo" placeholder="Saldo">
 <button type="button" onclick="addItem()">Adicionar</button>
+<button type="button" onclick="exportar()">Exportar Excel</button>
 </div>
 
 <div class="card">
 <h3>Itens</h3>
 <table>
 <thead>
-<tr><th>Código</th><th>Descrição</th><th>Necessidade</th><th></th></tr>
+<tr><th>Código</th><th>Descrição</th><th>Necessidade</th><th>Ações</th></tr>
 </thead>
 <tbody id="lista"></tbody>
 </table>
@@ -58,33 +59,67 @@ let items=[];
 function addItem(){
  const cod = document.getElementById('cod').value;
  const desc = document.getElementById('desc').value;
- const consumo = Number(document.getElementById('consumo').value) || 0;
- const saldo = Number(document.getElementById('saldo').value) || 0;
- const cobertura = Number(document.getElementById('cobertura').value) || 0;
+ const consumo = Number(document.getElementById('consumo').value)||0;
+ const saldo = Number(document.getElementById('saldo').value)||0;
+ const cobertura = Number(document.getElementById('cobertura').value)||0;
 
  if(!cod){ alert('Digite o código'); return; }
 
- const nec = Math.max((consumo * cobertura) - saldo, 0);
+ const nec = Math.max((consumo*cobertura)-saldo,0);
 
- items.push({cod, desc, nec});
+ items.push({cod,desc,consumo,saldo,nec});
  render();
+ limpar();
+}
 
- // limpar campos
+function render(){
+ let html='';
+ items.forEach((i,idx)=>{
+  html+=`<tr>
+   <td>${i.cod}</td>
+   <td>${i.desc}</td>
+   <td>${i.nec}</td>
+   <td>
+    <button onclick="editar(${idx})">Editar</button>
+    <button onclick="remover(${idx})">X</button>
+   </td>
+  </tr>`;
+ });
+ document.getElementById('lista').innerHTML=html;
+}
+
+function remover(i){items.splice(i,1);render();}
+
+function editar(i){
+ const item = items[i];
+ document.getElementById('cod').value=item.cod;
+ document.getElementById('desc').value=item.desc;
+ document.getElementById('consumo').value=item.consumo;
+ document.getElementById('saldo').value=item.saldo;
+
+ items.splice(i,1);
+ render();
+}
+
+function limpar(){
  document.getElementById('cod').value='';
  document.getElementById('desc').value='';
  document.getElementById('consumo').value='';
  document.getElementById('saldo').value='';
 }
 
-function render(){
- let html='';
- items.forEach((i,idx)=>{
-  html += `<tr><td>${i.cod}</td><td>${i.desc}</td><td>${i.nec}</td><td><button onclick="remover(${idx})">X</button></td></tr>`;
+function exportar(){
+ let csv='Codigo,Descricao,Consumo,Saldo,Necessidade\n';
+ items.forEach(i=>{
+  csv+=`${i.cod},${i.desc},${i.consumo},${i.saldo},${i.nec}\n`;
  });
- document.getElementById('lista').innerHTML = html;
-}
 
-function remover(i){ items.splice(i,1); render(); }
+ let blob=new Blob([csv]);
+ let a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download='ressuprimento.csv';
+ a.click();
+}
 </script>
 
 </body>
