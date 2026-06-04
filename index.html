@@ -1,62 +1,147 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-  <title>Ressuprimento Torres</title>
+<meta charset="UTF-8">
+<title>Ressuprimento Hospitalar</title>
+<style>
+  body { font-family: Arial; padding:20px; background:#f5f6fa; }
+  h1 { color:#2f3640; }
+  input, select { padding:5px; margin:4px; }
+  button { padding:6px 10px; margin:4px; cursor:pointer; }
+  .card { background:white; padding:15px; border-radius:8px; margin-bottom:10px; box-shadow:0px 2px 5px rgba(0,0,0,0.1); }
+  .item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #ddd; }
+</style>
 </head>
-
 <body>
-  <h1>Ressuprimento entre Torres</h1>
 
-  <label>Cobertura (dias):</label>
-  <input type="number" id="cobertura" value="3"><br><br>
+<h1>Ressuprimento entre Torres</h1>
 
-  <input id="cod" placeholder="Código"><br>
-  <input id="desc" placeholder="Descrição"><br>
-  <input id="consumo" placeholder="Consumo diário"><br>
-  <input type="date" id="data"><br><br>
+<div class="card">
+  Cobertura (dias): <input type="number" id="cobertura" value="3">
+  Torre Origem: <input id="origem" placeholder="Ex: Torre A">
+  Torre Destino: <input id="destino" placeholder="Ex: Torre B">
+</div>
 
+<div class="card">
+  <input id="cod" placeholder="Código">
+  <input id="desc" placeholder="Descrição">
+  <input id="consumo" placeholder="Consumo diário">
+  <input id="saldo" placeholder="Saldo destino">
+  <input type="date" id="data">
+  <br>
   <button onclick="addItem()">Adicionar</button>
+</div>
 
-  <h2>Itens</h2>
-  <ul id="lista"></ul>
+<div class="card">
+  <input id="busca" placeholder="Buscar código ou nome" onkeyup="filtrar()">
+</div>
 
-  <script>
-    let items = [];
+<div class="card">
+  <h3>Itens</h3>
+  <div id="lista"></div>
+</div>
 
-    function addItem() {
-      const cod = document.getElementById("cod").value;
-      const desc = document.getElementById("desc").value;
-      const consumo = Number(document.getElementById("consumo").value);
-      const cobertura = Number(document.getElementById("cobertura").value);
-      const data = document.getElementById("data").value;
+<div class="card">
+  <h3>Total do Pedido: <span id="total">0</span></h3>
+</div>
 
-      const qtd = consumo * cobertura;
+<button onclick="exportarExcel()">Exportar (CSV)</button>
 
-      const item = {
-        cod,
-        desc,
-        consumo,
-        qtd,
-        data
-      };
+<script>
+let items = [];
 
-      items.push(item);
+function addItem() {
+  const cod = codField().value;
+  const desc = descField().value;
+  const consumo = Number(consumoField().value);
+  const saldo = Number(saldoField().value);
+  const cobertura = Number(document.getElementById("cobertura").value);
 
-      render();
-    }
+  let nec = (consumo * cobertura) - saldo;
+  if (nec < 0) nec = 0;
 
-    function render() {
-      const lista = document.getElementById("lista");
-      lista.innerHTML = "";
+  items.push({ cod, desc, consumo, saldo, nec });
+  render();
+  limpar();
+}
 
-      items.forEach(i => {
-        const li = document.createElement("li");
-        li.innerText = `${i.cod} - ${i.desc} | Qtd: ${i.qtd}`;
-        lista.appendChild(li);
-      });
-    }
-  </script>
+function render() {
+  const lista = document.getElementById("lista");
+  lista.innerHTML = "";
+  let total = 0;
+
+  items.forEach((i, index) => {
+    total += i.nec;
+
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <span>${i.cod} - ${i.desc} | Nec: ${i.nec}</span>
+      <div>
+        <button onclick="editar(${index})">Editar</button>
+        <button onclick="remover(${index})">Excluir</button>
+      </div>
+    `;
+    lista.appendChild(div);
+  });
+
+  document.getElementById("total").innerText = total;
+}
+
+function remover(index) {
+  items.splice(index,1);
+  render();
+}
+
+function editar(index) {
+  const item = items[index];
+  codField().value = item.cod;
+  descField().value = item.desc;
+  consumoField().value = item.consumo;
+  saldoField().value = item.saldo;
+  remover(index);
+}
+
+function filtrar() {
+  const texto = document.getElementById("busca").value.toLowerCase();
+  const lista = document.getElementById("lista");
+  lista.innerHTML = "";
+
+  items.filter(i => i.cod.includes(texto) || i.desc.toLowerCase().includes(texto))
+       .forEach((i,index) => {
+        const div = document.createElement("div");
+        div.className = "item";
+        div.innerHTML = `${i.cod} - ${i.desc} | Nec: ${i.nec}`;
+        lista.appendChild(div);
+       });
+}
+
+function exportarExcel() {
+  let csv = "Codigo,Descricao,Consumo,Saldo,Necessidade\n";
+  items.forEach(i => {
+    csv += `${i.cod},${i.desc},${i.consumo},${i.saldo},${i.nec}\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = "ressuprimento.csv";
+  link.click();
+}
+
+function limpar() {
+  codField().value = "";
+  descField().value = "";
+  consumoField().value = "";
+  saldoField().value = "";
+}
+
+function codField(){ return document.getElementById("cod"); }
+function descField(){ return document.getElementById("desc"); }
+function consumoField(){ return document.getElementById("consumo"); }
+function saldoField(){ return document.getElementById("saldo"); }
+
+</script>
 
 </body>
 </html>
-``
