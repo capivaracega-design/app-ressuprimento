@@ -3,199 +3,496 @@
 <head>
 <meta charset="UTF-8">
 <title>Ressuprimento VNS</title>
+
 <style>
-body{font-family:Arial;background:#f4f1ec;margin:0}
-.header{background:#b58b63;color:#fff;padding:20px}
-.container{padding:20px}
-.card{background:#fff;padding:15px;margin-bottom:10px;border-radius:6px;border-left:5px solid #8a5a34}
-input,textarea{margin:5px;padding:6px}
-button{background:#8a5a34;color:#fff;border:none;padding:6px 12px;cursor:pointer;border-radius:4px;margin:2px}
-.tab{display:inline-block;margin-right:5px;padding:8px 12px;background:#ddd;cursor:pointer;border-radius:4px}
-.ativo{background:#8a5a34;color:#fff}
-table{width:100%;border-collapse:collapse;margin-top:10px}
-th,td{border:1px solid #ddd;padding:6px}
-th{background:#8a5a34;color:#fff}
-textarea{width:100%;height:120px}
+body{
+    font-family:Arial;
+    background:#f4f1ec;
+    margin:0;
+}
+
+.header{
+    background:#b58b63;
+    color:white;
+    padding:20px;
+}
+
+.container{
+    padding:20px;
+}
+
+.card{
+    background:white;
+    padding:15px;
+    margin-bottom:10px;
+    border-radius:6px;
+    border-left:5px solid #8a5a34;
+}
+
+input,textarea{
+    margin:5px;
+    padding:6px;
+}
+
+button{
+    background:#8a5a34;
+    color:white;
+    border:none;
+    padding:6px 12px;
+    cursor:pointer;
+    border-radius:4px;
+    margin:2px;
+}
+
+.tab{
+    display:inline-block;
+    margin-right:5px;
+    padding:8px 12px;
+    background:#ddd;
+    cursor:pointer;
+    border-radius:4px;
+}
+
+.ativo{
+    background:#8a5a34;
+    color:white;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+}
+
+th,td{
+    border:1px solid #ddd;
+    padding:6px;
+}
+
+th{
+    background:#8a5a34;
+    color:white;
+}
+
+textarea{
+    width:100%;
+    height:120px;
+}
+
+.critico{
+    background:#ffd6d6;
+}
 </style>
 </head>
+
 <body>
 
-<div class="header">VILA NOVA STAR — Ressuprimento</div>
+<div class="header">
+    VILA NOVA STAR — Ressuprimento
+</div>
 
 <div class="container">
 
-<div>
-<div class="tab ativo" onclick="abrir('operacao',this)">Operação</div>
-<div class="tab" onclick="abrir('lote',this)">Importar Lote</div>
-</div>
+    <div>
+        <div class="tab ativo" onclick="abrir('operacao',this)">Operação</div>
+        <div class="tab" onclick="abrir('lote',this)">Importar Lote</div>
+    </div>
 
-<div id="operacao">
-<div class="card">
-Cobertura: <input type="number" id="cobertura" value="3" onchange="recalcularTudo()">
-<button onclick="exportar()">Exportar Excel</button>
-</div>
+    <!-- OPERAÇÃO -->
+    <div id="operacao">
 
-<div class="card">
-<h3>Itens</h3>
-<table>
-<thead>
-<tr><th>Código</th><th>Descrição</th><th>Saldo</th><th>Qtd</th><th>Necessidade</th><th>Ações</th></tr>
-</thead>
-<tbody id="lista"></tbody>
-</table>
-</div>
-</div>
+        <div class="card">
+            Cobertura (dias):
+            <input
+                type="number"
+                id="cobertura"
+                value="3"
+                onchange="recalcularTudo()"
+            >
 
-<div id="lote" style="display:none">
+            <button onclick="exportar()">
+                Exportar Excel
+            </button>
+        </div>
 
-<div class="card">
-<h3>Adicionar item (manual)</h3>
-<input id="l_cod" placeholder="Código">
-<input id="l_desc" placeholder="Descrição">
-<input id="l_saldo" placeholder="Saldo Torre">
-<input id="l_qtd" placeholder="Qtd CD">
-<button onclick="addLoteItem()">Adicionar</button>
-</div>
+        <div class="card">
+            <h3>Itens</h3>
 
-<div class="card">
-<h3>Colar Excel</h3>
-<textarea id="excelInput"></textarea>
-<button onclick="importarExcel()">Importar Excel</button>
-</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Descrição</th>
+                        <th>Consumo Diário</th>
+                        <th>Saldo</th>
+                        <th>Necessidade</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
 
-<div class="card">
-<h3>Itens adicionados</h3>
-<table>
-<thead>
-<tr><th>Código</th><th>Descrição</th><th>Saldo</th><th>Qtd</th><th></th></tr>
-</thead>
-<tbody id="loteLista"></tbody>
-</table>
-<button onclick="confirmarLote()">Enviar para Operação</button>
-</div>
+                <tbody id="lista"></tbody>
+            </table>
+        </div>
 
-</div>
+    </div>
+
+    <!-- IMPORTAÇÃO -->
+    <div id="lote" style="display:none">
+
+        <!-- MANUAL -->
+        <div class="card">
+
+            <h3>Adicionar item manual</h3>
+
+            <input id="l_cod" placeholder="Código">
+
+            <input id="l_desc" placeholder="Descrição">
+
+            <input id="l_consumo" placeholder="Consumo Diário">
+
+            <input id="l_saldo" placeholder="Saldo Torre">
+
+            <button onclick="addLoteItem()">
+                Adicionar
+            </button>
+
+        </div>
+
+        <!-- EXCEL -->
+        <div class="card">
+
+            <h3>Colar Excel</h3>
+
+            <p>
+                Formato:
+                Código | Descrição | Consumo Diário | Saldo
+            </p>
+
+            <textarea id="excelInput"></textarea>
+
+            <button onclick="importarExcel()">
+                Importar Excel
+            </button>
+
+        </div>
+
+        <!-- LISTA -->
+        <div class="card">
+
+            <h3>Itens adicionados</h3>
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Descrição</th>
+                        <th>Consumo</th>
+                        <th>Saldo</th>
+                        <th></th>
+                    </tr>
+                </thead>
+
+                <tbody id="loteLista"></tbody>
+
+            </table>
+
+            <button onclick="confirmarLote()">
+                Enviar para Operação
+            </button>
+
+        </div>
+
+    </div>
 
 </div>
 
 <script>
-let items=[];
-let lote=[];
 
+let items = [];
+let lote = [];
+
+/* ABAS */
 function abrir(id,el){
- document.getElementById('operacao').style.display='none';
- document.getElementById('lote').style.display='none';
- document.getElementById(id).style.display='block';
- document.querySelectorAll('.tab').forEach(t=>t.classList.remove('ativo'));
- el.classList.add('ativo');
+
+    document.getElementById('operacao').style.display='none';
+    document.getElementById('lote').style.display='none';
+
+    document.getElementById(id).style.display='block';
+
+    document.querySelectorAll('.tab')
+        .forEach(t=>t.classList.remove('ativo'));
+
+    el.classList.add('ativo');
 }
 
-function calcularNec(saldo,qtd){
- const cobertura=Number(document.getElementById('cobertura').value)||0;
- return Math.max((qtd*cobertura)-saldo,0);
+/* CALCULO */
+function calcularNec(consumo,saldo){
+
+    const cobertura =
+        Number(document.getElementById('cobertura').value) || 0;
+
+    return Math.max((consumo * cobertura) - saldo,0);
 }
 
-// ✅ RECALCULAR AUTOMÁTICO
+/* RECALCULAR */
 function recalcularTudo(){
- items.forEach(i=>{
-  i.nec = calcularNec(i.saldo,i.qtd);
- });
- render();
+
+    items.forEach(i=>{
+
+        i.nec = calcularNec(
+            i.consumo,
+            i.saldo
+        );
+
+    });
+
+    render();
 }
 
-// ✅ ADICIONAR MANUAL
+/* ADICIONAR MANUAL */
 function addLoteItem(){
- let cod=l_cod.value;
- let desc=l_desc.value;
- let saldo=Number(l_saldo.value)||0;
- let qtd=Number(l_qtd.value)||0;
- if(!cod)return;
- lote.push({cod,desc,saldo,qtd});
- renderLote();
- l_cod.value='';l_desc.value='';l_saldo.value='';l_qtd.value='';
+
+    let cod =
+        document.getElementById('l_cod').value;
+
+    let desc =
+        document.getElementById('l_desc').value;
+
+    let consumo =
+        Number(document.getElementById('l_consumo').value) || 0;
+
+    let saldo =
+        Number(document.getElementById('l_saldo').value) || 0;
+
+    if(!cod){
+        alert('Informe o código');
+        return;
+    }
+
+    lote.push({
+        cod,
+        desc,
+        consumo,
+        saldo
+    });
+
+    renderLote();
+
+    limparCampos();
 }
 
-// ✅ IMPORTAR EXCEL
+/* IMPORTAR EXCEL */
 function importarExcel(){
- let linhas=excelInput.value.split('\n');
- linhas.forEach(l=>{
-  let col=l.split('\t');
-  if(col.length>=4){
-   let cod=col[0]?.trim();
-   let desc=col[1]?.trim();
-   let saldo=Number(col[2])||0;
-   let qtd=Number(col[3])||0;
-   if(cod) lote.push({cod,desc,saldo,qtd});
-  }
- });
- renderLote();
- excelInput.value='';
+
+    let linhas =
+        document.getElementById('excelInput')
+        .value
+        .split('\n');
+
+    linhas.forEach(l=>{
+
+        let col = l.split('\t');
+
+        if(col.length >= 4){
+
+            let cod = col[0]?.trim();
+
+            let desc = col[1]?.trim();
+
+            let consumo = Number(col[2]) || 0;
+
+            let saldo = Number(col[3]) || 0;
+
+            if(cod){
+
+                lote.push({
+                    cod,
+                    desc,
+                    consumo,
+                    saldo
+                });
+
+            }
+
+        }
+
+    });
+
+    renderLote();
+
+    document.getElementById('excelInput').value='';
 }
 
+/* LISTA LOTE */
 function renderLote(){
- let html='';
- lote.forEach((i,idx)=>{
-  html+=`<tr><td>${i.cod}</td><td>${i.desc}</td><td>${i.saldo}</td><td>${i.qtd}</td><td><button onclick="removerLote(${idx})">X</button></td></tr>`;
- });
- loteLista.innerHTML=html;
+
+    let html='';
+
+    lote.forEach((i,idx)=>{
+
+        html += `
+        <tr>
+            <td>${i.cod}</td>
+            <td>${i.desc}</td>
+            <td>${i.consumo}</td>
+            <td>${i.saldo}</td>
+
+            <td>
+                <button onclick="removerLote(${idx})">
+                    X
+                </button>
+            </td>
+        </tr>
+        `;
+
+    });
+
+    document.getElementById('loteLista').innerHTML = html;
 }
 
-function removerLote(i){lote.splice(i,1);renderLote();}
+function removerLote(i){
 
-// ✅ ENVIO PARA OPERAÇÃO
+    lote.splice(i,1);
+
+    renderLote();
+}
+
+/* ENVIAR PARA OPERAÇÃO */
 function confirmarLote(){
- lote.forEach(i=>{
-  let nec=calcularNec(i.saldo,i.qtd);
-  items.push({...i,nec});
- });
- lote=[];
- renderLote();
- render();
- abrir('operacao',document.querySelector('.tab'));
+
+    lote.forEach(i=>{
+
+        let nec =
+            calcularNec(i.consumo,i.saldo);
+
+        items.push({
+            ...i,
+            nec
+        });
+
+    });
+
+    lote=[];
+
+    renderLote();
+
+    render();
+
+    abrir(
+        'operacao',
+        document.querySelector('.tab')
+    );
 }
 
-// ✅ EDITAR ITEM
+/* EDITAR */
 function editar(idx){
- let i=items[idx];
- l_cod.value=i.cod;
- l_desc.value=i.desc;
- l_saldo.value=i.saldo;
- l_qtd.value=i.qtd;
- items.splice(idx,1);
- render();
- abrir('lote',document.querySelectorAll('.tab')[1]);
+
+    let i = items[idx];
+
+    document.getElementById('l_cod').value = i.cod;
+
+    document.getElementById('l_desc').value = i.desc;
+
+    document.getElementById('l_consumo').value = i.consumo;
+
+    document.getElementById('l_saldo').value = i.saldo;
+
+    items.splice(idx,1);
+
+    render();
+
+    abrir(
+        'lote',
+        document.querySelectorAll('.tab')[1]
+    );
 }
 
-// ✅ TABELA
+/* TABELA PRINCIPAL */
 function render(){
- let html='';
- items.forEach((i,idx)=>{
-  html+=`<tr>
-   <td>${i.cod}</td>
-   <td>${i.desc}</td>
-   <td>${i.saldo}</td>
-   <td>${i.qtd}</td>
-   <td>${i.nec}</td>
-   <td>
-    <button onclick="editar(${idx})">Editar</button>
-    <button onclick="remover(${idx})">X</button>
-   </td>
-  </tr>`;
- });
- lista.innerHTML=html;
+
+    let html='';
+
+    items.forEach((i,idx)=>{
+
+        let classe = i.nec > 0 ? 'critico' : '';
+
+        html += `
+        <tr class="${classe}">
+
+            <td>${i.cod}</td>
+
+            <td>${i.desc}</td>
+
+            <td>${i.consumo}</td>
+
+            <td>${i.saldo}</td>
+
+            <td>${i.nec}</td>
+
+            <td>
+
+                <button onclick="editar(${idx})">
+                    Editar
+                </button>
+
+                <button onclick="remover(${idx})">
+                    X
+                </button>
+
+            </td>
+
+        </tr>
+        `;
+
+    });
+
+    document.getElementById('lista').innerHTML = html;
 }
 
-function remover(i){items.splice(i,1);render();}
+function remover(i){
 
+    items.splice(i,1);
+
+    render();
+}
+
+/* LIMPAR */
+function limparCampos(){
+
+    document.getElementById('l_cod').value='';
+
+    document.getElementById('l_desc').value='';
+
+    document.getElementById('l_consumo').value='';
+
+    document.getElementById('l_saldo').value='';
+}
+
+/* EXPORTAR */
 function exportar(){
- let csv='Codigo,Descricao,Saldo,Qtd,Necessidade\n';
- items.forEach(i=>csv+=`${i.cod},${i.desc},${i.saldo},${i.qtd},${i.nec}\n`);
- let blob=new Blob([csv]);
- let a=document.createElement('a');
- a.href=URL.createObjectURL(blob);
- a.download='ressuprimento.csv';
- a.click();
+
+    let csv =
+`Codigo,Descricao,Consumo Diario,Saldo,Necessidade\n`;
+
+    items.forEach(i=>{
+
+        csv +=
+`${i.cod},${i.desc},${i.consumo},${i.saldo},${i.nec}\n`;
+
+    });
+
+    let blob = new Blob([csv]);
+
+    let a = document.createElement('a');
+
+    a.href = URL.createObjectURL(blob);
+
+    a.download = 'ressuprimento.csv';
+
+    a.click();
 }
+
 </script>
 
 </body>
